@@ -1,0 +1,46 @@
+name: Deploy Shop to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Clear caches and build
+        run: |
+          rm -rf .next node_modules/.cache .npm
+          npm ci --legacy-peer-deps
+          echo "Building Shop with timestamp: $(date)"
+          NODE_ENV=production npm run build
+          touch ./out/.nojekyll
+      
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'Deploy Shop from main ${{ github.sha }}'
